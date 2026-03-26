@@ -1,0 +1,18 @@
+[project]
+name = "scoring-api"
+version = "0.1.0"
+description = "Scoring API with declarative request validation using descriptors and metaclasses"
+readme = "readme.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+python_files = ["test.py"]
+python_classes = ["TestSuite"]
+python_functions = ["test_*"]
