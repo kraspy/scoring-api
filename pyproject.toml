@@ -11,8 +11,32 @@ dev = [
     "pytest>=8.0.0",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+
 [tool.pytest.ini_options]
-testpaths = ["."]
-python_files = ["test.py"]
-python_classes = ["TestSuite"]
+testpaths = ["tests", "."]
+pythonpath = ["."]
+python_files = ["test_*.py", "test.py"]
 python_functions = ["test_*"]
+markers = [
+    "unit: изолированные быстрые тесты без БД и HTTP",
+    "integration: SQLite и `method_handler` с реальной БД",
+    "functional: HTTP-сервер и сеть",
+]
+norecursedirs = [
+    ".git",
+    ".venv",
+    "source",
+    ".pytest_cache",
+    ".ruff_cache",
+]

@@ -1,4 +1,11 @@
 import random
+from typing import Protocol
+
+
+class ClientInterestsReader(Protocol):
+    """Хранилище интересов клиента для `get_interests` (структурная типизация)."""
+
+    def get_interests(self, client_id: int) -> list[str] | None: ...
 
 
 def get_score(
@@ -26,19 +33,29 @@ def get_score(
     return score
 
 
-def get_interests(cid: str) -> list[str]:
-    interests = [
-        "cars",
-        "pets",
-        "travel",
-        "hi-tech",
-        "sport",
-        "music",
-        "books",
-        "tv",
-        "cinema",
-        "geek",
-        "otus",
-    ]
+_INTERESTS_CATALOG = [
+    "cars",
+    "pets",
+    "travel",
+    "hi-tech",
+    "sport",
+    "music",
+    "books",
+    "tv",
+    "cinema",
+    "geek",
+    "otus",
+]
 
-    return random.sample(interests, 2)
+
+def get_interests(cid: str, store: ClientInterestsReader | None = None) -> list[str]:
+    """
+    Возвращает интересы клиента.
+    Если передан store, данные читаются из хранилища; при отсутствии записи — [].
+    Иначе — два случайных значения из каталога.
+    """
+    if store is not None:
+        row = store.get_interests(int(cid))
+        return list(row) if row is not None else []
+
+    return random.sample(_INTERESTS_CATALOG, 2)

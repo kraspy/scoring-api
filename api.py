@@ -343,7 +343,9 @@ def check_auth(request_data: dict[str, Any]) -> bool:
 def online_score_handler(
     request_data: dict[str, Any],
     ctx: dict[str, Any],
+    settings: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], int]:
+    _ = settings
     from scoring import get_score
 
     arguments = request_data.get("arguments", {})
@@ -374,8 +376,12 @@ def online_score_handler(
 def clients_interests_handler(
     request_data: dict[str, Any],
     ctx: dict[str, Any],
+    settings: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], int]:
     from scoring import get_interests
+
+    settings = settings or {}
+    store = settings.get("interests_store")
 
     arguments = request_data.get("arguments", {})
     interests_request = ClientsInterestsRequest(arguments)
@@ -390,7 +396,7 @@ def clients_interests_handler(
 
     response: dict[str, list[str]] = {}
     for cid in client_ids:
-        response[str(cid)] = get_interests(str(cid))
+        response[str(cid)] = get_interests(str(cid), store=store)
 
     return response, OK
 
@@ -420,7 +426,24 @@ def method_handler(
     if method_name not in handlers:
         return {"error": f"Метод '{method_name}' не найден"}, INVALID_REQUEST
 
-    return handlers[method_name](body, ctx)
+    settings = settings or {}
+    return handlers[method_name](body, ctx, settings)
+
+
+class ScoringHTTPServer(HTTPServer):
+    """HTTPServer с полем settings (interests_store и др.) для functional/integration."""
+
+    settings: dict[str, Any]
+
+    def __init__(
+        self,
+        server_address: tuple[str, int],
+        RequestHandlerClass: type[BaseHTTPRequestHandler],
+        *,
+        settings: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(server_address, RequestHandlerClass)
+        self.settings = dict(settings or {})
 
 
 class MainHTTPHandler(BaseHTTPRequestHandler):
@@ -449,9 +472,11 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
 
             if path in self.router:
                 try:
+                    srv_settings = getattr(self.server, "settings", None) or {}
                     response, code = self.router[path](
                         {"body": request, "headers": self.headers},
                         context,
+                        srv_settings,
                     )
                 except Exception as e:
                     logging.exception("Unexpected error: %s", e)
@@ -490,7 +515,7 @@ if __name__ == "__main__":
         encoding="utf-8",
     )
 
-    server = HTTPServer(("localhost", args.port), MainHTTPHandler)
+    server = ScoringHTTPServer(("localhost", args.port), MainHTTPHandler)
     logging.info("Starting server at %s" % args.port)
 
     try:
